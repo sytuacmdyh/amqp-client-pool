@@ -12,7 +12,7 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.TimeoutException;
 
 public class ChannelPool implements Cloneable {
-    private GenericObjectPool<ChannelC> internalPool;
+    private GenericObjectPool<Channel> internalPool;
     public static GenericObjectPoolConfig defaultConfig;
 
     static {
@@ -33,7 +33,7 @@ public class ChannelPool implements Cloneable {
             }
         }
 
-        this.internalPool = new GenericObjectPool<ChannelC>(factory, poolConfig);
+        this.internalPool = new GenericObjectPool<Channel>(factory, poolConfig);
     }
 
     private void closeInternalPool() {
@@ -44,23 +44,21 @@ public class ChannelPool implements Cloneable {
         }
     }
 
-    public void returnResource(ChannelC resource) {
+    public void returnChannel(Channel channel) {
         try {
-            if (resource.getChannel().isOpen()) {
-                internalPool.returnObject(resource);
+            if (channel.isOpen()) {
+                internalPool.returnObject(channel);
             } else {
-                internalPool.invalidateObject(resource);
+                internalPool.invalidateObject(channel);
             }
         } catch (Exception e) {
             throw new ChannelException("Could not return the resource to the pool", e);
         }
     }
 
-    public ChannelC getResource() {
+    public Channel getChannel() {
         try {
-            ChannelC channel = internalPool.borrowObject();
-            channel.setDataSource(this);
-            return channel;
+            return internalPool.borrowObject();
         } catch (NoSuchElementException nse) {
             if (null == nse.getCause()) { // The exception was caused by an exhausted pool
                 throw new ChannelException("Could not get a resource since the pool is exhausted", nse);
@@ -73,8 +71,8 @@ public class ChannelPool implements Cloneable {
     }
 
     public static void main(String[] args) throws IOException, TimeoutException, InterruptedException {
-//        testThreadPool();
-        testNormal();
+        testThreadPool();
+//        testNormal();
     }
 
     private static void testNormal() throws IOException, TimeoutException {
@@ -115,14 +113,13 @@ public class ChannelPool implements Cloneable {
 
     }
 
-    private static void testThreadPool(){
+    private static void testThreadPool() {
         final ChannelPool channelPool = new ChannelPool();
         for (int i = 0; i < 10; i++) {
             new Thread(() -> {
                 try {
                     while (true) {
-                        ChannelC resource = channelPool.getResource();
-                        Channel channel = resource.getChannel();
+                        Channel channel = channelPool.getChannel();
 
                         final String EXCHANGE_NAME = "dyh";
                         channel.exchangeDeclare(EXCHANGE_NAME, "direct");
@@ -142,7 +139,7 @@ public class ChannelPool implements Cloneable {
 //                        channel.basicCancel(consumer.getConsumerTag());
 
                         //关闭资源
-                        resource.close();
+                        channelPool.returnChannel(channel);
                     }
                 } catch (Exception e) {
 

@@ -1,5 +1,6 @@
 package com.yzccz.rabbit;
 
+import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.yzccz.rabbit.exceptions.ChannelException;
@@ -7,7 +8,7 @@ import org.apache.commons.pool2.PooledObject;
 import org.apache.commons.pool2.PooledObjectFactory;
 import org.apache.commons.pool2.impl.DefaultPooledObject;
 
-public class ChannelFactory implements PooledObjectFactory<ChannelC> {
+public class ChannelFactory implements PooledObjectFactory<Channel> {
     private Connection connection;
 
     public ChannelFactory() {
@@ -26,13 +27,13 @@ public class ChannelFactory implements PooledObjectFactory<ChannelC> {
         }
     }
 
-    public PooledObject<ChannelC> makeObject() throws Exception {
-        return new DefaultPooledObject<ChannelC>(new ChannelC(connection.createChannel()));
+    public PooledObject<Channel> makeObject() throws Exception {
+        return new DefaultPooledObject<Channel>(connection.createChannel());
     }
 
-    public void destroyObject(PooledObject<ChannelC> pooledObject) throws Exception {
-        final ChannelC channel = pooledObject.getObject();
-        if (channel.getChannel().isOpen()) {
+    public void destroyObject(PooledObject<Channel> pooledObject) throws Exception {
+        final Channel channel = pooledObject.getObject();
+        if (channel.isOpen()) {
             try {
                 channel.close();
             } catch (Exception e) {
@@ -40,16 +41,16 @@ public class ChannelFactory implements PooledObjectFactory<ChannelC> {
         }
     }
 
-    public boolean validateObject(PooledObject<ChannelC> pooledObject) {
-        final ChannelC channel = pooledObject.getObject();
-        return channel.getChannel().isOpen();
+    public boolean validateObject(PooledObject<Channel> pooledObject) {
+        final Channel channel = pooledObject.getObject();
+        return channel.isOpen();
     }
 
-    public void activateObject(PooledObject<ChannelC> pooledObject) throws Exception {
+    public void activateObject(PooledObject<Channel> pooledObject) throws Exception {
 
     }
 
-    public void passivateObject(PooledObject<ChannelC> pooledObject) throws Exception {
+    public void passivateObject(PooledObject<Channel> pooledObject) throws Exception {
 
     }
 }
